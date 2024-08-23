@@ -1,11 +1,11 @@
-using System.Collections;
+﻿using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
 public class CandyDestroyer : MonoBehaviour
 {
-    public CandyManager candyManager;
-    public int reward;
+    public CandyManager candyManager;   //CandyManagerを変数candyManagerに格納
+    public int reward;  //幾つ増やすか設定項目
     public GameObject effectPrefab;
     public Vector3 effectRotation;
 
