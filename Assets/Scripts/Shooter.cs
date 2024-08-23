@@ -1,82 +1,117 @@
-using System.Collections;
+﻿using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
 public class Shooter : MonoBehaviour
 {
-    const int MaxShotPower = 5;
-    const int RecoverySeconds = 3;
+    const int MaxShotPower = 5; //マックスで連続投入できる数 5という設定
+    const int RecoverySeconds = 3; //回復までタイム
 
-    int shotPower = MaxShotPower;
+    int shotPower = MaxShotPower; //MaxShotPowerで設定した数がそのままshotパワーになっている
+
     AudioSource shotSound;
 
-    public GameObject[] candyPrefabs;
-    public Transform candyParentTransform;
-    public CandyManager candyManager;
-    public float shotForce;
-    public float shotTorque;
-    public float baseWidth;
+    //public GameObject candyPrefab; //Instantiateで生成する対象
+    public GameObject[] candyPrefabs; //Instantiateでランダム生成する対象（配列）
 
+    public Transform candyParentTransform; //生成されたCandyの親役
+    public CandyManager candyManager; //CandyManagerクラスの変数を使えるようにする
+
+
+    public float shotForce; //AddForceで使うパワー
+    public float shotTorque; //AddTorqueで使う回転力
+
+    public float baseWidth; //Candyが飛んでいく位置の上限幅 "5"の幅をめがけて飛んでいく
+
+
+
+    // Start is called before the first frame update
     void Start()
     {
+        Debug.Log("Screen.width:" + Screen.width);
+
         shotSound = GetComponent<AudioSource>();
     }
 
+    // Update is called once per frame
     void Update()
     {
+        //if (Input.GetButtonDown("Fire1"))
+        //{
+        //    Shot();
+        //}
+
+        //特定のボタンが押された時にShot()メソッドを発動
         if (Input.GetButtonDown("Fire1")) Shot();
     }
 
-    // キャンディのプレハブからランダムに1つ選ぶ
-    GameObject SampleCandy()
+    //voidじゃなくGameObjectが返ってくる
+    //配列candyPrefabsの中からランダムにオブジェクトを1個取り出す
+    GameObject sampleCandy()
     {
         int index = Random.Range(0, candyPrefabs.Length);
         return candyPrefabs[index];
     }
 
+    //voidじゃなくVector3が返ってくる
+    //マウスが押された位置と連動するようにBaseのどこをめがけてCandyを飛ばすか、
+    //その位置を決めている
     Vector3 GetInstantiatePosition()
     {
-        // 画面のサイズとInputの割合からキャンディ生成のポジションを計算
-        float x = baseWidth *
-            (Input.mousePosition.x / Screen.width) - (baseWidth / 2);
+        //ゲーム画面上のマウスのX座標を取得する
+        float xx = Input.mousePosition.x;
+        Debug.Log(xx);
+
+        //Screen.width＝画面幅マウスの位置を元にどのへんに飛ばすか計算する
+        float x = baseWidth * (xx / Screen.width) - (baseWidth / 2);
         return transform.position + new Vector3(x, 0, 0);
     }
 
     public void Shot()
     {
-        // キャンディを生成できる条件外ならばShotしない
-        if (candyManager.GetCandyAmount() <= 0) return;
+        if (candyManager.GetCandyAmount() <= 0) return; //残数0なら何もやらずにメソッド終了
+
         if (shotPower <= 0) return;
 
-        // プレハブからCandyオブジェクトを生成
-        GameObject candy = (GameObject)Instantiate(
-            SampleCandy(),
-            GetInstantiatePosition(),
+
+        //①Candyの生成 Instantiate(対象物,位置,回転)
+        //GameObject candy = Instantiate(
+        //    candyPrefab,
+        //    transform.position,
+        //    Quaternion.identity
+        //    );
+
+        GameObject candy = Instantiate(
+            sampleCandy(),  //配列でランダムのキャンディーを選ぶ自作メソッド
+            GetInstantiatePosition(),   //マウスの位置に応じた位置の自作メソッド
             Quaternion.identity
             );
 
-        // 生成したCandyオブジェクトの親をcandyParentTransformに設定する
+        //生成したcandyオブジェクトの親は = candyParentTransform変数に指定したオブジェクト(Candies)
         candy.transform.parent = candyParentTransform;
 
-        // CadnyオブジェクトのRigidbodyを取得し力と回転を加える
+
+        //②生成したCandyのRigidbodyを使えるようにしている
         Rigidbody candyRigidBody = candy.GetComponent<Rigidbody>();
+        //③生成したCandyにAddForce()メソッドをかけて飛ばしている
+        //transform.forward→オブジェクトの前方
+        //ForceModeを省略すると、「ForceMode.Force」が初期設定になる
         candyRigidBody.AddForce(transform.forward * shotForce);
+        //④横にスピンさせる力
         candyRigidBody.AddTorque(new Vector3(0, shotTorque, 0));
 
-        // Candyのストックを消費
+        //Candyのストックを消費
         candyManager.ConsumeCandy();
-        // ShotPowerを消費
+
         ConsumePower();
 
-        // サウンドを再生
-        shotSound.Play();
+        shotSound.Play(); //AudioSourceに設置されているAudioClipを再生する
     }
 
     void OnGUI()
     {
         GUI.color = Color.black;
 
-        // ShotPowerの残数を+の数で表示 
         string label = "";
         for (int i = 0; i < shotPower; i++) label = label + "+";
 
@@ -85,14 +120,12 @@ public class Shooter : MonoBehaviour
 
     void ConsumePower()
     {
-        // ShotPowerを消費すると同時に回復のカウントをスタート
-        shotPower--;
-        StartCoroutine(RecoverPower());
+        shotPower--;　//パワーを1減らす
+        StartCoroutine(RecoverPower());　//コルーチン（回復開始）
     }
 
     IEnumerator RecoverPower()
     {
-        // 一定秒数待った後にshotPowerを回復
         yield return new WaitForSeconds(RecoverySeconds);
         shotPower++;
     }
